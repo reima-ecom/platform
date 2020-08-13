@@ -140,19 +140,19 @@ test('removes pages param', (t) => {
 test('keeps only pages param', (t) => {
   const onlyPages = keepTemplatePagesOnly([
     { filename: 'a', parsed: { a: 'a' } },
-    { filename: 'b', parsed: { b: 'b', pages: 'something' } },
+    { filename: 'b', parsed: { b: 'b', pages: ['something'] } },
   ]);
   t.deepEqual(onlyPages, [
     { filename: 'a', pages: undefined },
-    { filename: 'b', pages: 'something' },
+    { filename: 'b', pages: ['something'] },
   ]);
 });
 
 test('joining pages', (t) => {
   const joined = joinPagesIntoTemplateDefinitions(
     [
-      { filename: 'a', pages: 'a pages' },
-      { filename: 'b', pages: 'b pages' },
+      { filename: 'a', pages: ['a pages'] },
+      { filename: 'b', pages: ['b pages'] },
     ],
     [
       { filename: 'a', definition: { key: 'a' } },
@@ -160,7 +160,7 @@ test('joining pages', (t) => {
     ],
   );
   const expected = [
-    { filename: 'a', definition: { key: 'a', pages: 'a pages' } },
+    { filename: 'a', definition: { key: 'a', pages: ['a pages'] } },
     { filename: 'c', definition: { key: 'c' } },
   ];
   t.deepEqual(joined, expected);

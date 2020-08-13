@@ -1,12 +1,20 @@
 {
-  "name": "update-forestry-frontmatter",
+  "name": "@reima-solution-sales/update-forestry-frontmatter",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "bin": "index.js",
   "type": "module",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/reima-solution-sales/workflows.git",
+    "directory": "update-forestry-frontmatter"
+  },
   "scripts": {
-    "test": "eslint . && tsc -p jsconfig.json"
+    "test": "eslint . && tsc -p jsconfig.json && ava"
   },
   "keywords": [],
   "author": "",
