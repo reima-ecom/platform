@@ -5,6 +5,28 @@ import yaml from 'js-yaml';
 
 const FRONTMATTER_DIR = ['.forestry', 'front_matter', 'templates'];
 
+/**
+ * @typedef FileWithContents
+ * @property {string} filename
+ * @property {string} contents
+ *
+ * @typedef FileParsed
+ * @property {string} filename
+ * @property {object} parsed
+ *
+ * @typedef FileWithDefinition
+ * @property {string} filename
+ * @property {object} definition
+ *
+ * @typedef FileWithPages
+ * @property {string} filename
+ * @property {string[]} pages
+ */
+
+/**
+ * @param {string} rootDir
+ * @returns {Promise<FileWithContents[]>}
+ */
 export const readFrontmatterTemplates = async (rootDir) => {
   const frontmatterDir = join(rootDir, ...FRONTMATTER_DIR);
   // get filenames
@@ -20,6 +42,10 @@ export const readFrontmatterTemplates = async (rootDir) => {
   return templates;
 };
 
+/**
+ * @param {FileWithContents[]} templatesWithContent
+ * @returns {FileParsed[]}
+ */
 export const parseTemplateContents = (templatesWithContent) =>
   templatesWithContent.map((templateWithContents) => {
     const { filename, contents } = templateWithContents;
@@ -30,6 +56,10 @@ export const parseTemplateContents = (templatesWithContent) =>
     };
   });
 
+/**
+ * @param {FileParsed[]} templatesParsed
+ * @returns {FileWithDefinition[]}
+ */
 export const removeTemplatePages = (templatesParsed) =>
   templatesParsed.map((template) => {
     const { pages, ...definition } = template.parsed;
@@ -39,6 +69,10 @@ export const removeTemplatePages = (templatesParsed) =>
     };
   });
 
+/**
+ * @param {FileParsed[]} templatesParsed
+ * @returns {FileWithPages[]}
+ */
 export const keepTemplatePagesOnly = (templatesParsed) =>
   templatesParsed.map((template) => {
     const { pages } = template.parsed;
@@ -48,6 +82,10 @@ export const keepTemplatePagesOnly = (templatesParsed) =>
     };
   });
 
+/**
+ * @param {FileWithDefinition[]} templatesWithDefinition
+ * @returns {FileWithContents[]}
+ */
 export const serializeTemplateContents = (templatesWithDefinition) =>
   templatesWithDefinition.map((templateWithDefinition) => {
     const { filename, definition } = templateWithDefinition;
@@ -58,6 +96,10 @@ export const serializeTemplateContents = (templatesWithDefinition) =>
     };
   });
 
+/**
+ * @param {string} rootDir
+ * @returns {(filesWithContent: FileWithContents[]) => Promise<string>}
+ */
 export const writeFrontmatterTemplates = (rootDir) => async (templatesWithContent) => {
   const frontmatterDir = join(rootDir, ...FRONTMATTER_DIR);
   // create directory
@@ -71,6 +113,11 @@ export const writeFrontmatterTemplates = (rootDir) => async (templatesWithConten
   return 'Success!';
 };
 
+/**
+ * @param {FileWithPages[]} filesWithPages
+ * @param {FileWithDefinition[]} filesWithDefinition
+ * @returns {FileWithDefinition[]}
+ */
 export const joinPagesIntoTemplateDefinitions = (filesWithPages, filesWithDefinition) => {
   const findFile = (filename) => (file) => file.filename === filename;
   return filesWithDefinition.map((file) => {
@@ -88,6 +135,11 @@ export const joinPagesIntoTemplateDefinitions = (filesWithPages, filesWithDefini
   });
 };
 
+/**
+ * @param {string} sourceDir
+ * @param {string} targetDir
+ * @returns {Promise<string[]>}
+ */
 const updateFrontmatter = async (sourceDir, targetDir) => {
   const eventLog = [];
   // read source dir fm into array
@@ -96,6 +148,7 @@ const updateFrontmatter = async (sourceDir, targetDir) => {
   const sourcesWithDefinition = removeTemplatePages(sourcesParsed);
   eventLog.push('Got source front matter files');
   // read target dir pages into array
+  /** @type {FileWithPages[]} */
   let targetWithPages = [];
   try {
     const targetWithContent = await readFrontmatterTemplates(targetDir);
