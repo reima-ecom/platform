@@ -109,3 +109,5 @@ export type BulkCollectionProduct = {
   publishedOnCurrentPublication: boolean;
   __parentId: ID;
 };
+
+export type BulkCollectionTypes = BulkCollection | BulkCollectionProduct;

@@ -1,6 +1,4 @@
-import { GraphQLQuery } from "./queries.ts";
-
-export type GraphQLQueryable = <T>(graphQl: GraphQLQuery) => Promise<T>;
+export type GraphQLQueryable = <T>(graphQl: string) => Promise<T>;
 
 export const createAdminQueryable = (
   shopifyShop: string,
@@ -29,20 +27,12 @@ export const createAdminQueryable = (
   };
 
 export function createYieldableQuery<T>(
-  queryable: (graphQl: string) => Promise<T>,
+  queryable: GraphQLQueryable,
 ) {
   async function* getNext(graphQl: string) {
     while (true) {
-      yield queryable(graphQl);
+      yield queryable<T>(graphQl);
     }
   }
   return getNext;
 }
-
-
-let myAdd: (x: number, y: number) => number = function (
-  x: number,
-  y: number
-): number {
-  return x + y;
-};

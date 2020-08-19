@@ -13,12 +13,14 @@ import {
   BulkCollection,
   ID,
   BulkCollectionProduct,
+  BulkCollectionTypes,
 } from "./queries.ts";
 
 type Jsonl = string;
-
 type CollectionHandle = string;
 type ProductHandle = string;
+
+// domain object types
 
 export type Collection = {
   type: "collection";
@@ -34,6 +36,8 @@ export type CollectionProduct = {
 };
 
 export type Object = Collection | CollectionProduct;
+
+// bulk operation graphql
 
 const createBulkOperation = (adminQuery: GraphQLQueryable) =>
   async (query: BulkQuery) => {
@@ -63,13 +67,16 @@ const getBulkOperationUrlWhenReady = async (
   throw new Error("Bulk operation not for awaitable");
 };
 
+// file downloading
+
 const download = async <T extends string>(url: string) => {
   const response = await fetch(url);
   return await response.text() as T;
 };
 
+// node type
+
 type Node = { id: ID };
-type NodeWithParent = Node & { __parentId: ID };
 export enum NodeType {
   Collection,
   Product,
@@ -81,13 +88,22 @@ export const getNodeType = (id: ID): NodeType => {
   return NodeType[match[1] as keyof typeof NodeType];
 };
 
-const mapCollection = (bulkCollection: BulkCollection): Collection => ({
+// parse into correct types
+
+const parseJson = (json: string) => JSON.parse(json) as BulkCollectionTypes;
+
+// mappers
+
+export const mapCollection = (bulkCollection: BulkCollection): Collection => ({
   type: "collection",
   handle: bulkCollection.handle,
   title: bulkCollection.title,
   description: bulkCollection.descriptionHtml,
 });
 
+/**
+ * @param collectionHandles Map (object) of collection ids to handles
+ */
 export const mapCollectionProduct = (
   collectionHandles: { [id: string]: string },
 ) =>
@@ -97,10 +113,7 @@ export const mapCollectionProduct = (
     collection: collectionHandles[bulkCollectionProduct.__parentId],
   });
 
-const parseJson = (json: string) =>
-  JSON.parse(json) as BulkCollection | BulkCollectionProduct;
-
-const mapJsonToObject = (
+const objectToDomain = (
   mapCollectionProduct: (
     bulkCollectionProduct: BulkCollectionProduct,
   ) => CollectionProduct,
@@ -114,11 +127,15 @@ const mapJsonToObject = (
     }
   };
 
+// filters
+
 const filterType = (type: NodeType) =>
   (obj: Node) => getNodeType(obj.id) === type;
 
-const filterPublished = (obj: BulkCollection | BulkCollectionProduct) =>
+const filterPublished = (obj: { publishedOnCurrentPublication: boolean }) =>
   obj.publishedOnCurrentPublication;
+
+// collection handle map getter
 
 export const collectionHandleReducer = (
   collectionHandles: { [id: string]: string },
@@ -130,8 +147,9 @@ export const collectionHandleReducer = (
   };
 };
 
+// jsonl to domain object
+
 export const jsonlToObjects = (jsonl: Jsonl): Object[] => {
-  // split lines into json, filter away last empty line, and parse
   const parsed = jsonl
     .split("\n")
     .filter(Boolean)
@@ -142,13 +160,10 @@ export const jsonlToObjects = (jsonl: Jsonl): Object[] => {
     .map((obj) => obj as BulkCollection)
     .reduce<{ [id: string]: string }>(collectionHandleReducer, {});
   const mapProduct = mapCollectionProduct(collectionHandles);
-  return parsed.map(mapJsonToObject(mapProduct));
+  return parsed.map(objectToDomain(mapProduct));
 };
 
-type File = {
-  filepath: string;
-  contents: string;
-};
+// domain object to content dto
 
 const objectToContent = (obj: Object) => {
   // todo: remove type from frontmatter?
@@ -173,6 +188,13 @@ const objectToContent = (obj: Object) => {
   }
 };
 
+// file handling
+
+type File = {
+  filepath: string;
+  contents: string;
+};
+
 const serializeObject = (stringifier: (obj: object) => string) =>
   (obj: Object): File => ({
     filepath: obj.type === "product"
@@ -180,12 +202,6 @@ const serializeObject = (stringifier: (obj: object) => string) =>
       : `${obj.handle}/_index.md`,
     contents: `---\n${stringifier(obj)}\n---`,
   });
-
-export const dirname = (path: string) => {
-  const arr = path.split("/");
-  arr.pop();
-  return arr.join("/");
-};
 
 const writeFileToDir = (dir: string) =>
   async (file: File) => {
@@ -196,6 +212,14 @@ const writeFileToDir = (dir: string) =>
       new TextEncoder().encode(file.contents),
     );
   };
+
+export const dirname = (path: string) => {
+  const arr = path.split("/");
+  arr.pop();
+  return arr.join("/");
+};
+
+// main workflow
 
 export default async function syncCollections(
   shopifyShop: string,
