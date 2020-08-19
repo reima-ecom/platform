@@ -151,19 +151,26 @@ type File = {
 };
 
 const objectToContent = (obj: Object) => {
-  if (obj.type === "collection") {
-    return {
-      ...obj,
-      layout: "collection",
-      main: [
-        {
-          template: "products",
-          collection: obj.handle,
-        },
-      ],
-    };
+  // todo: remove type from frontmatter?
+  // const { type, ...rest } = obj;
+  switch (obj.type) {
+    case "collection":
+      return {
+        ...obj,
+        layout: "collection",
+        main: [
+          {
+            template: "products",
+            collection: obj.handle,
+          },
+        ],
+      };
+    case "product":
+      return {
+        ...obj,
+        // todo: set type to products?
+      };
   }
-  return obj;
 };
 
 const serializeObject = (stringifier: (obj: object) => string) =>
