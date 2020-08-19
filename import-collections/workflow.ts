@@ -1,26 +1,25 @@
 import {
   createAdminQueryable,
-  createYieldableQuery,
-  GraphQLQueryable,
 } from "./graphql.ts";
 import {
-  currentBulkOperation,
-  CurrentBulkOperation,
-  BulkQuery,
-  BulkQueryResponse,
-  createBulkQuery,
   collectionBulkQuery,
-  BulkCollection,
   ID,
-  BulkCollectionProduct,
-  BulkCollectionTypes,
+  CollectionShopify,
+  CollectionProductShopify,
+  CollectionTypeShopify,
 } from "./queries.ts";
+import {
+  createBulkOperation,
+  getBulkOperationUrlWhenReady,
+} from "./bulk-operation.ts";
+import { serializeContent, writeFileToDir } from "./filesystem.ts";
 
 type Jsonl = string;
-type CollectionHandle = string;
-type ProductHandle = string;
 
 // domain object types
+
+type CollectionHandle = string;
+type ProductHandle = string;
 
 export type Collection = {
   type: "collection";
@@ -35,37 +34,36 @@ export type CollectionProduct = {
   handle: ProductHandle;
 };
 
-export type Object = Collection | CollectionProduct;
+export type CollectionType = Collection | CollectionProduct;
 
-// bulk operation graphql
+export type Content<t, T, A = {}> = {
+  path: string;
+  type: t;
+  content: T;
+} & A;
 
-const createBulkOperation = (adminQuery: GraphQLQueryable) =>
-  async (query: BulkQuery) => {
-    const graphQl = createBulkQuery(query);
+export type CollectionContent = Content<"collection", {
+  layout: "collection";
+  handle: CollectionHandle;
+  title: string;
+  description: string;
+  main: [
+    {
+      template: "products";
+      collection: CollectionHandle;
+    },
+  ];
+}>;
 
-    const { bulkOperationRunQuery: { bulkOperation, userErrors } } =
-      await adminQuery<BulkQueryResponse>(graphQl);
+export type CollectionProductContent = Content<"product", {
+  type: "products";
+  noindex: true;
+  weight: number;
+}, { collection: CollectionHandle }>;
 
-    if (userErrors.length) {
-      console.error(userErrors);
-      throw new Error("Could not create bulk query");
-    }
-
-    return bulkOperation;
-  };
-
-const getBulkOperationUrlWhenReady = async (
-  bulkOperationYieldable: AsyncGenerator<CurrentBulkOperation, void, unknown>,
-) => {
-  for await (const result of bulkOperationYieldable) {
-    const { currentBulkOperation } = result;
-    console.log(currentBulkOperation.status);
-    if (currentBulkOperation.status === "COMPLETED") {
-      return currentBulkOperation.url;
-    }
-  }
-  throw new Error("Bulk operation not for awaitable");
-};
+export type CollectionTypeContent =
+  | CollectionContent
+  | CollectionProductContent;
 
 // file downloading
 
@@ -90,11 +88,13 @@ export const getNodeType = (id: ID): NodeType => {
 
 // parse into correct types
 
-const parseJson = (json: string) => JSON.parse(json) as BulkCollectionTypes;
+const parseJson = (json: string) => JSON.parse(json) as CollectionTypeShopify;
 
 // mappers
 
-export const mapCollection = (bulkCollection: BulkCollection): Collection => ({
+export const mapCollection = (
+  bulkCollection: CollectionShopify,
+): Collection => ({
   type: "collection",
   handle: bulkCollection.handle,
   title: bulkCollection.title,
@@ -107,7 +107,7 @@ export const mapCollection = (bulkCollection: BulkCollection): Collection => ({
 export const mapCollectionProduct = (
   collectionHandles: { [id: string]: string },
 ) =>
-  (bulkCollectionProduct: BulkCollectionProduct): CollectionProduct => ({
+  (bulkCollectionProduct: CollectionProductShopify): CollectionProduct => ({
     type: "product",
     handle: bulkCollectionProduct.handle,
     collection: collectionHandles[bulkCollectionProduct.__parentId],
@@ -115,15 +115,15 @@ export const mapCollectionProduct = (
 
 const objectToDomain = (
   mapCollectionProduct: (
-    bulkCollectionProduct: BulkCollectionProduct,
+    bulkCollectionProduct: CollectionProductShopify,
   ) => CollectionProduct,
 ) =>
-  (obj: Node): Object => {
+  (obj: Node): CollectionType => {
     switch (getNodeType(obj.id)) {
       case NodeType.Collection:
-        return mapCollection(obj as BulkCollection);
+        return mapCollection(obj as CollectionShopify);
       case NodeType.Product:
-        return mapCollectionProduct(obj as BulkCollectionProduct);
+        return mapCollectionProduct(obj as CollectionProductShopify);
     }
   };
 
@@ -139,7 +139,7 @@ const filterPublished = (obj: { publishedOnCurrentPublication: boolean }) =>
 
 export const collectionHandleReducer = (
   collectionHandles: { [id: string]: string },
-  collection: BulkCollection,
+  collection: CollectionShopify,
 ) => {
   return {
     ...collectionHandles,
@@ -149,7 +149,7 @@ export const collectionHandleReducer = (
 
 // jsonl to domain object
 
-export const jsonlToObjects = (jsonl: Jsonl): Object[] => {
+export const jsonlToObjects = (jsonl: Jsonl): CollectionType[] => {
   const parsed = jsonl
     .split("\n")
     .filter(Boolean)
@@ -157,66 +157,46 @@ export const jsonlToObjects = (jsonl: Jsonl): Object[] => {
     .filter(filterPublished);
   const collectionHandles = parsed
     .filter(filterType(NodeType.Collection))
-    .map((obj) => obj as BulkCollection)
+    .map((obj) => obj as CollectionShopify)
     .reduce<{ [id: string]: string }>(collectionHandleReducer, {});
   const mapProduct = mapCollectionProduct(collectionHandles);
-  return parsed.map(objectToDomain(mapProduct));
+  const domainObjects = parsed.map(objectToDomain(mapProduct));
+  console.log(domainObjects);
+  return domainObjects;
 };
 
 // domain object to content dto
 
-const objectToContent = (obj: Object) => {
-  // todo: remove type from frontmatter?
-  // const { type, ...rest } = obj;
+const objectToContent = (obj: CollectionType, counter: number): CollectionTypeContent => {
   switch (obj.type) {
     case "collection":
+      // this has no type safety currently!
       return {
-        ...obj,
-        layout: "collection",
-        main: [
-          {
-            template: "products",
-            collection: obj.handle,
-          },
-        ],
-      };
+        path: `${obj.handle}/_index.md`,
+        type: 'collection',
+        content: {
+          layout: "collection",
+          description: obj.description,
+          title: obj.title,
+          main: [
+            {
+              template: "products",
+              collection: obj.handle,
+            },
+          ],
+        }
+      } as CollectionContent;
     case "product":
       return {
-        ...obj,
-        // todo: set type to products?
-      };
+        path: `${obj.collection}/products/${obj.handle}.md`,
+        type: 'product',
+        content: {
+          noindex: true,
+          type: 'products',
+          weight: counter,
+        }
+      } as CollectionProductContent;
   }
-};
-
-// file handling
-
-type File = {
-  filepath: string;
-  contents: string;
-};
-
-const serializeObject = (stringifier: (obj: object) => string) =>
-  (obj: Object): File => ({
-    filepath: obj.type === "product"
-      ? `${obj.collection}/products/${obj.handle}.md`
-      : `${obj.handle}/_index.md`,
-    contents: `---\n${stringifier(obj)}\n---`,
-  });
-
-const writeFileToDir = (dir: string) =>
-  async (file: File) => {
-    const path = `${dir}/${file.filepath}`;
-    await Deno.mkdir(dirname(path), { recursive: true });
-    await Deno.writeFile(
-      path,
-      new TextEncoder().encode(file.contents),
-    );
-  };
-
-export const dirname = (path: string) => {
-  const arr = path.split("/");
-  arr.pop();
-  return arr.join("/");
 };
 
 // main workflow
@@ -227,20 +207,25 @@ export default async function syncCollections(
   collectionsDir: string,
   stringifier: (obj: object) => string,
 ) {
+  // set up dependencies
   const adminQueryable = createAdminQueryable(
     shopifyShop,
     shopifyBasicAuth,
   );
-  const bulkOperationCreator = createBulkOperation(adminQueryable);
-  const bulkOperationYieldable = createYieldableQuery<CurrentBulkOperation>(
-    adminQueryable,
-  )(currentBulkOperation);
-
-  await bulkOperationCreator(collectionBulkQuery);
-  const url = await getBulkOperationUrlWhenReady(bulkOperationYieldable);
-  const jsonl = await download<Jsonl>(url);
-  const serialize = serializeObject(stringifier);
+  const runBulkQuery = createBulkOperation(adminQueryable);
+  const runCollectionBulkQuery = () => runBulkQuery(collectionBulkQuery);
+  const getBulkOperationUrl = () =>
+    getBulkOperationUrlWhenReady(adminQueryable);
+  const serialize = serializeContent(stringifier);
   const write = writeFileToDir(collectionsDir);
+
+  // get jsonl
+  const jsonl: Jsonl = await Promise.resolve()
+    .then(runCollectionBulkQuery)
+    .then(getBulkOperationUrl)
+    .then(download);
+
+  // write
   await Promise.all(
     jsonlToObjects(jsonl)
       .map(objectToContent)

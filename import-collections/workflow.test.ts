@@ -8,10 +8,8 @@ import {
   mapCollectionProduct,
   CollectionProduct,
   jsonlToObjects,
-  Object,
-  dirname,
 } from "./workflow.ts";
-import { BulkCollection } from "./queries.ts";
+import { CollectionShopify } from "./queries.ts";
 
 Deno.test("type getting works", () => {
   const type = getNodeType("gid://shopify/Collection/199172030614");
@@ -19,7 +17,7 @@ Deno.test("type getting works", () => {
 });
 
 Deno.test("collection handles mapper works", () => {
-  const collections: BulkCollection[] = [
+  const collections: CollectionShopify[] = [
     {
       id: "1",
       handle: "something",
@@ -86,11 +84,4 @@ Deno.test("jsonl mapper works", () => {
     { type: "product", handle: "product", collection: "something else" },
   ];
   assertEquals(actual, expected);
-});
-
-Deno.test("dirname works", () => {
-  assertEquals(dirname('/hello/there'), '/hello');
-  assertEquals(dirname('/hello/there.md'), '/hello');
-  assertEquals(dirname('/hello/iam/here/not/there.md'), '/hello/iam/here/not');
-  assertEquals(dirname('hello/there'), 'hello');
 });

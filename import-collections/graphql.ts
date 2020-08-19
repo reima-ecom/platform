@@ -1,4 +1,5 @@
-export type GraphQLQueryable = <T>(graphQl: string) => Promise<T>;
+export type GraphQLQuery = string;
+export type GraphQLQueryable = <T>(graphQl: GraphQLQuery) => Promise<T>;
 
 export const createAdminQueryable = (
   shopifyShop: string,
@@ -25,14 +26,3 @@ export const createAdminQueryable = (
     }
     return data as T;
   };
-
-export function createYieldableQuery<T>(
-  queryable: GraphQLQueryable,
-) {
-  async function* getNext(graphQl: string) {
-    while (true) {
-      yield queryable<T>(graphQl);
-    }
-  }
-  return getNext;
-}

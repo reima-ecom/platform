@@ -1,4 +1,5 @@
-export type GraphQLQuery = string;
+import { GraphQLQuery } from "./graphql.ts";
+
 export type BulkQuery = GraphQLQuery;
 export type ID = string;
 
@@ -91,7 +92,7 @@ export const collectionBulkQuery: BulkQuery = `
 }
 `;
 
-export type BulkCollection = {
+export type CollectionShopify = {
   id: ID;
   handle: string;
   title: string;
@@ -103,11 +104,11 @@ export type BulkCollection = {
   };
 };
 
-export type BulkCollectionProduct = {
+export type CollectionProductShopify = {
   id: string;
   handle: string;
   publishedOnCurrentPublication: boolean;
   __parentId: ID;
 };
 
-export type BulkCollectionTypes = BulkCollection | BulkCollectionProduct;
+export type CollectionTypeShopify = CollectionShopify | CollectionProductShopify;
