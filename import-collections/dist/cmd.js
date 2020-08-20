@@ -3480,10 +3480,16 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/bu
             });
             exports_35("getBulkOperationUrlWhenReady", getBulkOperationUrlWhenReady = async (adminQuery) => {
                 const bulkOperationYieldable = createYieldableQuery(adminQuery)(queries_ts_1.currentBulkOperation);
+                let currentStatus = "";
+                const statusLoggerIntervalId = setInterval(() => {
+                    console.log(`Still waiting for bulk query (${currentStatus})...`);
+                }, 15000);
                 for await (const result of bulkOperationYieldable) {
-                    const { currentBulkOperation } = result;
-                    if (currentBulkOperation.status === "COMPLETED") {
-                        return currentBulkOperation.url;
+                    const { currentBulkOperation: { status, url } } = result;
+                    currentStatus = status;
+                    if (status === "COMPLETED") {
+                        clearInterval(statusLoggerIntervalId);
+                        return url;
                     }
                 }
                 throw new Error("Bulk operation not for awaitable");

@@ -39,11 +39,22 @@ export const getBulkOperationUrlWhenReady = async (
   const bulkOperationYieldable = createYieldableQuery<CurrentBulkOperation>(
     adminQuery,
   )(currentBulkOperation);
+  // store current status here
+  let currentStatus = "";
+  // show the user we're still waiting every once in a while
+  const statusLoggerIntervalId = setInterval(() => {
+    console.log(`Still waiting for bulk query (${currentStatus})...`);
+  }, 15000);
+
   for await (const result of bulkOperationYieldable) {
-    const { currentBulkOperation } = result;
-    if (currentBulkOperation.status === "COMPLETED") {
-      return currentBulkOperation.url;
+    const { currentBulkOperation: { status, url } } = result;
+    currentStatus = status;
+    if (status === "COMPLETED") {
+      // clear logging interval
+      clearInterval(statusLoggerIntervalId);
+      return url;
     }
   }
+
   throw new Error("Bulk operation not for awaitable");
 };
