@@ -3628,8 +3628,10 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/wo
                             type: "collection",
                             content: {
                                 layout: "collection",
+                                handle: obj.handle,
                                 description: obj.description,
                                 title: obj.title,
+                                filters: true,
                                 main: [
                                     {
                                         template: "products",
