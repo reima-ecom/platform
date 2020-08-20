@@ -34,8 +34,8 @@ export type Collection = {
 
 export type CollectionProduct = {
   type: "product";
-  collection: CollectionHandle;
   handle: ProductHandle;
+  collection: CollectionHandle;
 };
 
 export type CollectionType = Collection | CollectionProduct;
@@ -51,6 +51,7 @@ export type CollectionContent = Content<"collection", {
   handle: CollectionHandle;
   title: string;
   description: string;
+  filters: boolean;
   main: [
     {
       template: "products";
@@ -176,14 +177,15 @@ const objectToContent = (
 ): CollectionTypeContent => {
   switch (obj.type) {
     case "collection":
-      // this has no type safety currently!
       return {
         path: `${obj.handle}/_index.md`,
         type: "collection",
         content: {
           layout: "collection",
+          handle: obj.handle,
           description: obj.description,
           title: obj.title,
+          filters: true,
           main: [
             {
               template: "products",
@@ -191,7 +193,7 @@ const objectToContent = (
             },
           ],
         },
-      } as CollectionContent;
+      };
     case "product":
       return {
         path: `${obj.collection}/products/${obj.handle}.md`,
