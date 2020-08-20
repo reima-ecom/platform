@@ -27,7 +27,12 @@ export const writeFileToDir = (dir: string) =>
   };
 
 export const deleteDirectory = async (dir: string) => {
-  await Deno.remove(dir, { recursive: true });
+  try {
+    await Deno.remove(dir, { recursive: true });
+  } catch (error) {
+    // throw if this was something else than not found error
+    if (!(error instanceof Deno.errors.NotFound)) throw error;
+  }
 };
 
 export const dirname = (path: string) => {

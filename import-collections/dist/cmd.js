@@ -3508,7 +3508,13 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/fi
                 await Deno.writeFile(path, new TextEncoder().encode(file.data));
             });
             exports_36("deleteDirectory", deleteDirectory = async (dir) => {
-                await Deno.remove(dir, { recursive: true });
+                try {
+                    await Deno.remove(dir, { recursive: true });
+                }
+                catch (error) {
+                    if (!(error instanceof Deno.errors.NotFound))
+                        throw error;
+                }
             });
             exports_36("dirname", dirname = (path) => {
                 const arr = path.split("/");
