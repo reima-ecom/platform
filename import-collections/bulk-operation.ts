@@ -41,7 +41,6 @@ export const getBulkOperationUrlWhenReady = async (
   )(currentBulkOperation);
   for await (const result of bulkOperationYieldable) {
     const { currentBulkOperation } = result;
-    console.log(currentBulkOperation.status);
     if (currentBulkOperation.status === "COMPLETED") {
       return currentBulkOperation.url;
     }

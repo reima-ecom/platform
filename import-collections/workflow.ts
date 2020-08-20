@@ -12,7 +12,11 @@ import {
   createBulkOperation,
   getBulkOperationUrlWhenReady,
 } from "./bulk-operation.ts";
-import { serializeContent, writeFileToDir } from "./filesystem.ts";
+import {
+  serializeContent,
+  writeFileToDir,
+  deleteDirectory,
+} from "./filesystem.ts";
 
 type Jsonl = string;
 
@@ -161,19 +165,21 @@ export const jsonlToObjects = (jsonl: Jsonl): CollectionType[] => {
     .reduce<{ [id: string]: string }>(collectionHandleReducer, {});
   const mapProduct = mapCollectionProduct(collectionHandles);
   const domainObjects = parsed.map(objectToDomain(mapProduct));
-  console.log(domainObjects);
   return domainObjects;
 };
 
 // domain object to content dto
 
-const objectToContent = (obj: CollectionType, counter: number): CollectionTypeContent => {
+const objectToContent = (
+  obj: CollectionType,
+  counter: number,
+): CollectionTypeContent => {
   switch (obj.type) {
     case "collection":
       // this has no type safety currently!
       return {
         path: `${obj.handle}/_index.md`,
-        type: 'collection',
+        type: "collection",
         content: {
           layout: "collection",
           description: obj.description,
@@ -184,17 +190,17 @@ const objectToContent = (obj: CollectionType, counter: number): CollectionTypeCo
               collection: obj.handle,
             },
           ],
-        }
+        },
       } as CollectionContent;
     case "product":
       return {
         path: `${obj.collection}/products/${obj.handle}.md`,
-        type: 'product',
+        type: "product",
         content: {
           noindex: true,
-          type: 'products',
+          type: "products",
           weight: counter,
-        }
+        },
       } as CollectionProductContent;
   }
 };
@@ -225,11 +231,14 @@ export default async function syncCollections(
     .then(getBulkOperationUrl)
     .then(download);
 
+  // create files
+  const files = jsonlToObjects(jsonl)
+    .map(objectToContent)
+    .map(serialize);
+
   // write
-  await Promise.all(
-    jsonlToObjects(jsonl)
-      .map(objectToContent)
-      .map(serialize)
-      .map(write),
-  );
+  await deleteDirectory(collectionsDir);
+  await Promise.all(files.map(write));
+
+  console.log("Success!");
 }

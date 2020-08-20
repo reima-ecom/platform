@@ -3355,14 +3355,43 @@ System.register("https://deno.land/std@0.65.0/encoding/yaml", ["https://deno.lan
         }
     };
 });
-System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/queries", [], function (exports_33, context_33) {
+System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/graphql", [], function (exports_33, context_33) {
     "use strict";
-    var createBulkQuery, currentBulkOperation, collectionBulkQuery;
+    var createAdminQueryable;
     var __moduleName = context_33 && context_33.id;
     return {
         setters: [],
         execute: function () {
-            exports_33("createBulkQuery", createBulkQuery = (graphQl) => `mutation {
+            exports_33("createAdminQueryable", createAdminQueryable = (shopifyShop, shopifyBasicAuth) => async (graphQl) => {
+                const resp = await fetch(`https://${shopifyShop}.myshopify.com/admin/api/2020-01/graphql.json`, {
+                    headers: {
+                        Accept: "application/json",
+                        "Content-Type": "application/json",
+                        Authorization: `Basic ${shopifyBasicAuth}`,
+                    },
+                    method: "POST",
+                    body: JSON.stringify({ query: graphQl }),
+                });
+                if (!resp.ok)
+                    throw new Error(`Could not query: ${resp.statusText}`);
+                const { data, errors } = await resp.json();
+                if (errors) {
+                    console.error(errors);
+                    throw new Error("Errors encountered - see above");
+                }
+                return data;
+            });
+        }
+    };
+});
+System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/queries", [], function (exports_34, context_34) {
+    "use strict";
+    var createBulkQuery, currentBulkOperation, collectionBulkQuery;
+    var __moduleName = context_34 && context_34.id;
+    return {
+        setters: [],
+        execute: function () {
+            exports_34("createBulkQuery", createBulkQuery = (graphQl) => `mutation {
     bulkOperationRunQuery(
      query: """${graphQl}"""
     ) {
@@ -3376,7 +3405,7 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/qu
       }
     }
   }`);
-            exports_33("currentBulkOperation", currentBulkOperation = `
+            exports_34("currentBulkOperation", currentBulkOperation = `
   {
     currentBulkOperation {
       id
@@ -3386,7 +3415,7 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/qu
       url
     }
   }`);
-            exports_33("collectionBulkQuery", collectionBulkQuery = `
+            exports_34("collectionBulkQuery", collectionBulkQuery = `
 {
   collections {
     edges {
@@ -3421,10 +3450,10 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/qu
         }
     };
 });
-System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/graphql", [], function (exports_34, context_34) {
+System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/bulk-operation", ["file:///C:/Users/selineri/Repos/workflows/import-collections/queries"], function (exports_35, context_35) {
     "use strict";
-    var createAdminQueryable, myAdd;
-    var __moduleName = context_34 && context_34.id;
+    var queries_ts_1, createBulkOperation, getBulkOperationUrlWhenReady;
+    var __moduleName = context_35 && context_35.id;
     function createYieldableQuery(queryable) {
         async function* getNext(graphQl) {
             while (true) {
@@ -3433,65 +3462,14 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/gr
         }
         return getNext;
     }
-    exports_34("createYieldableQuery", createYieldableQuery);
-    return {
-        setters: [],
-        execute: function () {
-            exports_34("createAdminQueryable", createAdminQueryable = (shopifyShop, shopifyBasicAuth) => async (graphQl) => {
-                const resp = await fetch(`https://${shopifyShop}.myshopify.com/admin/api/2020-01/graphql.json`, {
-                    headers: {
-                        Accept: "application/json",
-                        "Content-Type": "application/json",
-                        Authorization: `Basic ${shopifyBasicAuth}`,
-                    },
-                    method: "POST",
-                    body: JSON.stringify({ query: graphQl }),
-                });
-                if (!resp.ok)
-                    throw new Error(`Could not query: ${resp.statusText}`);
-                const { data, errors } = await resp.json();
-                if (errors) {
-                    console.error(errors);
-                    throw new Error("Errors encountered - see above");
-                }
-                return data;
-            });
-            myAdd = function (x, y) {
-                return x + y;
-            };
-        }
-    };
-});
-System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/workflow", ["file:///C:/Users/selineri/Repos/workflows/import-collections/graphql", "file:///C:/Users/selineri/Repos/workflows/import-collections/queries"], function (exports_35, context_35) {
-    "use strict";
-    var graphql_ts_1, queries_ts_1, createBulkOperation, getBulkOperationUrlWhenReady, download, NodeType, getNodeType, mapCollection, mapCollectionProduct, parseJson, mapJsonToObject, filterType, filterPublished, collectionHandleReducer, jsonlToObjects, objectToContent, serializeObject, dirname, writeFileToDir;
-    var __moduleName = context_35 && context_35.id;
-    async function syncCollections(shopifyShop, shopifyBasicAuth, collectionsDir, stringifier) {
-        const adminQueryable = graphql_ts_1.createAdminQueryable(shopifyShop, shopifyBasicAuth);
-        const bulkOperationCreator = createBulkOperation(adminQueryable);
-        const bulkOperationYieldable = graphql_ts_1.createYieldableQuery(adminQueryable)(queries_ts_1.currentBulkOperation);
-        await bulkOperationCreator(queries_ts_1.collectionBulkQuery);
-        const url = await getBulkOperationUrlWhenReady(bulkOperationYieldable);
-        const jsonl = await download(url);
-        const serialize = serializeObject(stringifier);
-        const write = writeFileToDir(collectionsDir);
-        await Promise.all(jsonlToObjects(jsonl)
-            .map(objectToContent)
-            .map(serialize)
-            .map(write));
-    }
-    exports_35("default", syncCollections);
     return {
         setters: [
-            function (graphql_ts_1_1) {
-                graphql_ts_1 = graphql_ts_1_1;
-            },
             function (queries_ts_1_1) {
                 queries_ts_1 = queries_ts_1_1;
             }
         ],
         execute: function () {
-            createBulkOperation = (adminQuery) => async (query) => {
+            exports_35("createBulkOperation", createBulkOperation = (adminQuery) => async (query) => {
                 const graphQl = queries_ts_1.createBulkQuery(query);
                 const { bulkOperationRunQuery: { bulkOperation, userErrors } } = await adminQuery(graphQl);
                 if (userErrors.length) {
@@ -3499,17 +3477,86 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/wo
                     throw new Error("Could not create bulk query");
                 }
                 return bulkOperation;
-            };
-            getBulkOperationUrlWhenReady = async (bulkOperationYieldable) => {
+            });
+            exports_35("getBulkOperationUrlWhenReady", getBulkOperationUrlWhenReady = async (adminQuery) => {
+                const bulkOperationYieldable = createYieldableQuery(adminQuery)(queries_ts_1.currentBulkOperation);
                 for await (const result of bulkOperationYieldable) {
                     const { currentBulkOperation } = result;
-                    console.log(currentBulkOperation.status);
                     if (currentBulkOperation.status === "COMPLETED") {
                         return currentBulkOperation.url;
                     }
                 }
                 throw new Error("Bulk operation not for awaitable");
-            };
+            });
+        }
+    };
+});
+System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/filesystem", [], function (exports_36, context_36) {
+    "use strict";
+    var serializeContent, writeFileToDir, deleteDirectory, dirname;
+    var __moduleName = context_36 && context_36.id;
+    return {
+        setters: [],
+        execute: function () {
+            exports_36("serializeContent", serializeContent = (stringifier) => (obj) => ({
+                path: obj.path,
+                data: `---\n${stringifier(obj.content)}\n---`,
+            }));
+            exports_36("writeFileToDir", writeFileToDir = (dir) => async (file) => {
+                const path = `${dir}/${file.path}`;
+                await Deno.mkdir(dirname(path), { recursive: true });
+                await Deno.writeFile(path, new TextEncoder().encode(file.data));
+            });
+            exports_36("deleteDirectory", deleteDirectory = async (dir) => {
+                await Deno.remove(dir, { recursive: true });
+            });
+            exports_36("dirname", dirname = (path) => {
+                const arr = path.split("/");
+                arr.pop();
+                return arr.join("/");
+            });
+        }
+    };
+});
+System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/workflow", ["file:///C:/Users/selineri/Repos/workflows/import-collections/graphql", "file:///C:/Users/selineri/Repos/workflows/import-collections/queries", "file:///C:/Users/selineri/Repos/workflows/import-collections/bulk-operation", "file:///C:/Users/selineri/Repos/workflows/import-collections/filesystem"], function (exports_37, context_37) {
+    "use strict";
+    var graphql_ts_1, queries_ts_2, bulk_operation_ts_1, filesystem_ts_1, download, NodeType, getNodeType, parseJson, mapCollection, mapCollectionProduct, objectToDomain, filterType, filterPublished, collectionHandleReducer, jsonlToObjects, objectToContent;
+    var __moduleName = context_37 && context_37.id;
+    async function syncCollections(shopifyShop, shopifyBasicAuth, collectionsDir, stringifier) {
+        const adminQueryable = graphql_ts_1.createAdminQueryable(shopifyShop, shopifyBasicAuth);
+        const runBulkQuery = bulk_operation_ts_1.createBulkOperation(adminQueryable);
+        const runCollectionBulkQuery = () => runBulkQuery(queries_ts_2.collectionBulkQuery);
+        const getBulkOperationUrl = () => bulk_operation_ts_1.getBulkOperationUrlWhenReady(adminQueryable);
+        const serialize = filesystem_ts_1.serializeContent(stringifier);
+        const write = filesystem_ts_1.writeFileToDir(collectionsDir);
+        const jsonl = await Promise.resolve()
+            .then(runCollectionBulkQuery)
+            .then(getBulkOperationUrl)
+            .then(download);
+        const files = jsonlToObjects(jsonl)
+            .map(objectToContent)
+            .map(serialize);
+        await filesystem_ts_1.deleteDirectory(collectionsDir);
+        await Promise.all(files.map(write));
+        console.log("Success!");
+    }
+    exports_37("default", syncCollections);
+    return {
+        setters: [
+            function (graphql_ts_1_1) {
+                graphql_ts_1 = graphql_ts_1_1;
+            },
+            function (queries_ts_2_1) {
+                queries_ts_2 = queries_ts_2_1;
+            },
+            function (bulk_operation_ts_1_1) {
+                bulk_operation_ts_1 = bulk_operation_ts_1_1;
+            },
+            function (filesystem_ts_1_1) {
+                filesystem_ts_1 = filesystem_ts_1_1;
+            }
+        ],
+        execute: function () {
             download = async (url) => {
                 const response = await fetch(url);
                 return await response.text();
@@ -3518,26 +3565,26 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/wo
                 NodeType[NodeType["Collection"] = 0] = "Collection";
                 NodeType[NodeType["Product"] = 1] = "Product";
             })(NodeType || (NodeType = {}));
-            exports_35("NodeType", NodeType);
-            exports_35("getNodeType", getNodeType = (id) => {
+            exports_37("NodeType", NodeType);
+            exports_37("getNodeType", getNodeType = (id) => {
                 const match = id.match(/gid:\/\/shopify\/(\w+)\/.*/);
                 if (!match)
                     throw new Error(`Could not get type from id ${id}`);
                 return NodeType[match[1]];
             });
-            mapCollection = (bulkCollection) => ({
+            parseJson = (json) => JSON.parse(json);
+            exports_37("mapCollection", mapCollection = (bulkCollection) => ({
                 type: "collection",
                 handle: bulkCollection.handle,
                 title: bulkCollection.title,
                 description: bulkCollection.descriptionHtml,
-            });
-            exports_35("mapCollectionProduct", mapCollectionProduct = (collectionHandles) => (bulkCollectionProduct) => ({
+            }));
+            exports_37("mapCollectionProduct", mapCollectionProduct = (collectionHandles) => (bulkCollectionProduct) => ({
                 type: "product",
                 handle: bulkCollectionProduct.handle,
                 collection: collectionHandles[bulkCollectionProduct.__parentId],
             }));
-            parseJson = (json) => JSON.parse(json);
-            mapJsonToObject = (mapCollectionProduct) => (obj) => {
+            objectToDomain = (mapCollectionProduct) => (obj) => {
                 switch (getNodeType(obj.id)) {
                     case NodeType.Collection:
                         return mapCollection(obj);
@@ -3547,13 +3594,13 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/wo
             };
             filterType = (type) => (obj) => getNodeType(obj.id) === type;
             filterPublished = (obj) => obj.publishedOnCurrentPublication;
-            exports_35("collectionHandleReducer", collectionHandleReducer = (collectionHandles, collection) => {
+            exports_37("collectionHandleReducer", collectionHandleReducer = (collectionHandles, collection) => {
                 return {
                     ...collectionHandles,
                     [collection.id]: collection.handle,
                 };
             });
-            exports_35("jsonlToObjects", jsonlToObjects = (jsonl) => {
+            exports_37("jsonlToObjects", jsonlToObjects = (jsonl) => {
                 const parsed = jsonl
                     .split("\n")
                     .filter(Boolean)
@@ -3564,46 +3611,46 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/wo
                     .map((obj) => obj)
                     .reduce(collectionHandleReducer, {});
                 const mapProduct = mapCollectionProduct(collectionHandles);
-                return parsed.map(mapJsonToObject(mapProduct));
+                const domainObjects = parsed.map(objectToDomain(mapProduct));
+                return domainObjects;
             });
-            objectToContent = (obj) => {
-                if (obj.type === "collection") {
-                    return {
-                        ...obj,
-                        layout: "collection",
-                        main: [
-                            {
-                                template: "products",
-                                collection: obj.handle,
+            objectToContent = (obj, counter) => {
+                switch (obj.type) {
+                    case "collection":
+                        return {
+                            path: `${obj.handle}/_index.md`,
+                            type: "collection",
+                            content: {
+                                layout: "collection",
+                                description: obj.description,
+                                title: obj.title,
+                                main: [
+                                    {
+                                        template: "products",
+                                        collection: obj.handle,
+                                    },
+                                ],
                             },
-                        ],
-                    };
+                        };
+                    case "product":
+                        return {
+                            path: `${obj.collection}/products/${obj.handle}.md`,
+                            type: "product",
+                            content: {
+                                noindex: true,
+                                type: "products",
+                                weight: counter,
+                            },
+                        };
                 }
-                return obj;
-            };
-            serializeObject = (stringifier) => (obj) => ({
-                filepath: obj.type === "product"
-                    ? `${obj.collection}/products/${obj.handle}.md`
-                    : `${obj.handle}/_index.md`,
-                contents: `---\n${stringifier(obj)}\n---`,
-            });
-            exports_35("dirname", dirname = (path) => {
-                const arr = path.split("/");
-                arr.pop();
-                return arr.join("/");
-            });
-            writeFileToDir = (dir) => async (file) => {
-                const path = `${dir}/${file.filepath}`;
-                await Deno.mkdir(dirname(path), { recursive: true });
-                await Deno.writeFile(path, new TextEncoder().encode(file.contents));
             };
         }
     };
 });
-System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/cmd", ["https://deno.land/std@0.65.0/encoding/yaml", "file:///C:/Users/selineri/Repos/workflows/import-collections/workflow"], function (exports_36, context_36) {
+System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/cmd", ["https://deno.land/std@0.65.0/encoding/yaml", "file:///C:/Users/selineri/Repos/workflows/import-collections/workflow"], function (exports_38, context_38) {
     "use strict";
     var yaml_ts_1, workflow_ts_1, _a, shopifyShop, directory, shopifyBasicAuth, usage;
-    var __moduleName = context_36 && context_36.id;
+    var __moduleName = context_38 && context_38.id;
     return {
         setters: [
             function (yaml_ts_1_1) {

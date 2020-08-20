@@ -2,13 +2,18 @@ import { CollectionTypeContent } from "./workflow.ts";
 
 export type File = {
   path: string;
-  contents: string;
+  data: string;
+};
+
+type Content = {
+  path: string;
+  content: object;
 };
 
 export const serializeContent = (stringifier: (obj: object) => string) =>
-  (obj: CollectionTypeContent): File => ({
+  (obj: Content): File => ({
     path: obj.path,
-    contents: `---\n${stringifier(obj.content)}\n---`,
+    data: `---\n${stringifier(obj.content)}\n---`,
   });
 
 export const writeFileToDir = (dir: string) =>
@@ -17,9 +22,13 @@ export const writeFileToDir = (dir: string) =>
     await Deno.mkdir(dirname(path), { recursive: true });
     await Deno.writeFile(
       path,
-      new TextEncoder().encode(file.contents),
+      new TextEncoder().encode(file.data),
     );
   };
+
+export const deleteDirectory = async (dir: string) => {
+  await Deno.remove(dir, { recursive: true });
+};
 
 export const dirname = (path: string) => {
   const arr = path.split("/");
