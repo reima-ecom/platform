@@ -1,5 +1,3 @@
-import { CollectionTypeContent } from "./workflow.ts";
-
 export type File = {
   path: string;
   data: string;

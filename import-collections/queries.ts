@@ -1,7 +1,7 @@
 import { GraphQLQuery } from "./graphql.ts";
+import { ID } from "./node.ts";
 
 export type BulkQuery = GraphQLQuery;
-export type ID = string;
 
 export const createBulkQuery = (graphQl: BulkQuery) =>
   `mutation {
@@ -112,3 +112,7 @@ export type CollectionProductShopify = {
 };
 
 export type CollectionTypeShopify = CollectionShopify | CollectionProductShopify;
+
+export type Jsonl = string;
+
+export const toCollectionTypeShopify = (json: string) => JSON.parse(json) as CollectionTypeShopify;
