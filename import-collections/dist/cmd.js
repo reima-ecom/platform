@@ -3384,14 +3384,37 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/gr
         }
     };
 });
-System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/queries", [], function (exports_34, context_34) {
+System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/node", [], function (exports_34, context_34) {
     "use strict";
-    var createBulkQuery, currentBulkOperation, collectionBulkQuery;
+    var NodeType, getNodeType, filterType, filterPublished;
     var __moduleName = context_34 && context_34.id;
     return {
         setters: [],
         execute: function () {
-            exports_34("createBulkQuery", createBulkQuery = (graphQl) => `mutation {
+            (function (NodeType) {
+                NodeType[NodeType["Collection"] = 0] = "Collection";
+                NodeType[NodeType["Product"] = 1] = "Product";
+            })(NodeType || (NodeType = {}));
+            exports_34("NodeType", NodeType);
+            exports_34("getNodeType", getNodeType = (id) => {
+                const match = id.match(/gid:\/\/shopify\/(\w+)\/.*/);
+                if (!match)
+                    throw new Error(`Could not get type from id ${id}`);
+                return NodeType[match[1]];
+            });
+            exports_34("filterType", filterType = (type) => (obj) => getNodeType(obj.id) === type);
+            exports_34("filterPublished", filterPublished = (obj) => obj.publishedOnCurrentPublication);
+        }
+    };
+});
+System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/queries", [], function (exports_35, context_35) {
+    "use strict";
+    var createBulkQuery, currentBulkOperation, collectionBulkQuery, toCollectionTypeShopify;
+    var __moduleName = context_35 && context_35.id;
+    return {
+        setters: [],
+        execute: function () {
+            exports_35("createBulkQuery", createBulkQuery = (graphQl) => `mutation {
     bulkOperationRunQuery(
      query: """${graphQl}"""
     ) {
@@ -3405,7 +3428,7 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/qu
       }
     }
   }`);
-            exports_34("currentBulkOperation", currentBulkOperation = `
+            exports_35("currentBulkOperation", currentBulkOperation = `
   {
     currentBulkOperation {
       id
@@ -3415,7 +3438,7 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/qu
       url
     }
   }`);
-            exports_34("collectionBulkQuery", collectionBulkQuery = `
+            exports_35("collectionBulkQuery", collectionBulkQuery = `
 {
   collections {
     edges {
@@ -3447,13 +3470,80 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/qu
   }
 }
 `);
+            exports_35("toCollectionTypeShopify", toCollectionTypeShopify = (json) => JSON.parse(json));
         }
     };
 });
-System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/bulk-operation", ["file:///C:/Users/selineri/Repos/workflows/import-collections/queries"], function (exports_35, context_35) {
+System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/domain", ["file:///C:/Users/selineri/Repos/workflows/import-collections/queries", "file:///C:/Users/selineri/Repos/workflows/import-collections/node"], function (exports_36, context_36) {
     "use strict";
-    var queries_ts_1, createBulkOperation, getBulkOperationUrlWhenReady;
-    var __moduleName = context_35 && context_35.id;
+    var queries_ts_1, node_ts_1, mapCollection, collectionHandleReducer, jsonlToObjects, mapCollectionProduct, objectToDomain;
+    var __moduleName = context_36 && context_36.id;
+    return {
+        setters: [
+            function (queries_ts_1_1) {
+                queries_ts_1 = queries_ts_1_1;
+            },
+            function (node_ts_1_1) {
+                node_ts_1 = node_ts_1_1;
+            }
+        ],
+        execute: function () {
+            exports_36("mapCollection", mapCollection = (bulkCollection) => {
+                const [contentHtml, contentHtmlSummary] = bulkCollection.descriptionHtml
+                    .split("[first_paragraph]");
+                const collection = {
+                    type: "collection",
+                    handle: bulkCollection.handle,
+                    title: bulkCollection.title,
+                    seoTitle: bulkCollection.seo.title || bulkCollection.title,
+                    seoDescription: bulkCollection.seo.description,
+                };
+                if (contentHtml)
+                    collection.contentHtml = contentHtml;
+                if (contentHtmlSummary)
+                    collection.contentHtmlSummary = contentHtmlSummary;
+                return collection;
+            });
+            exports_36("collectionHandleReducer", collectionHandleReducer = (collectionHandles, collection) => {
+                return {
+                    ...collectionHandles,
+                    [collection.id]: collection.handle,
+                };
+            });
+            exports_36("jsonlToObjects", jsonlToObjects = (jsonl) => {
+                const parsed = jsonl
+                    .split("\n")
+                    .filter(Boolean)
+                    .map(queries_ts_1.toCollectionTypeShopify)
+                    .filter(node_ts_1.filterPublished);
+                const collectionHandles = parsed
+                    .filter(node_ts_1.filterType(node_ts_1.NodeType.Collection))
+                    .map((obj) => obj)
+                    .reduce(collectionHandleReducer, {});
+                const mapProduct = mapCollectionProduct(collectionHandles);
+                const domainObjects = parsed.map(objectToDomain(mapProduct));
+                return domainObjects;
+            });
+            exports_36("mapCollectionProduct", mapCollectionProduct = (collectionHandles) => (bulkCollectionProduct) => ({
+                type: "product",
+                handle: bulkCollectionProduct.handle,
+                collection: collectionHandles[bulkCollectionProduct.__parentId],
+            }));
+            exports_36("objectToDomain", objectToDomain = (mapCollectionProduct) => (obj) => {
+                switch (node_ts_1.getNodeType(obj.id)) {
+                    case node_ts_1.NodeType.Collection:
+                        return mapCollection(obj);
+                    case node_ts_1.NodeType.Product:
+                        return mapCollectionProduct(obj);
+                }
+            });
+        }
+    };
+});
+System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/bulk-operation", ["file:///C:/Users/selineri/Repos/workflows/import-collections/queries"], function (exports_37, context_37) {
+    "use strict";
+    var queries_ts_2, createBulkOperation, getBulkOperationUrlWhenReady;
+    var __moduleName = context_37 && context_37.id;
     function createYieldableQuery(queryable) {
         async function* getNext(graphQl) {
             while (true) {
@@ -3464,13 +3554,13 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/bu
     }
     return {
         setters: [
-            function (queries_ts_1_1) {
-                queries_ts_1 = queries_ts_1_1;
+            function (queries_ts_2_1) {
+                queries_ts_2 = queries_ts_2_1;
             }
         ],
         execute: function () {
-            exports_35("createBulkOperation", createBulkOperation = (adminQuery) => async (query) => {
-                const graphQl = queries_ts_1.createBulkQuery(query);
+            exports_37("createBulkOperation", createBulkOperation = (adminQuery) => async (query) => {
+                const graphQl = queries_ts_2.createBulkQuery(query);
                 const { bulkOperationRunQuery: { bulkOperation, userErrors } } = await adminQuery(graphQl);
                 if (userErrors.length) {
                     console.error(userErrors);
@@ -3478,8 +3568,8 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/bu
                 }
                 return bulkOperation;
             });
-            exports_35("getBulkOperationUrlWhenReady", getBulkOperationUrlWhenReady = async (adminQuery) => {
-                const bulkOperationYieldable = createYieldableQuery(adminQuery)(queries_ts_1.currentBulkOperation);
+            exports_37("getBulkOperationUrlWhenReady", getBulkOperationUrlWhenReady = async (adminQuery) => {
+                const bulkOperationYieldable = createYieldableQuery(adminQuery)(queries_ts_2.currentBulkOperation);
                 let currentStatus = "";
                 const statusLoggerIntervalId = setInterval(() => {
                     console.log(`Still waiting for bulk query (${currentStatus})...`);
@@ -3497,23 +3587,23 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/bu
         }
     };
 });
-System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/filesystem", [], function (exports_36, context_36) {
+System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/filesystem", [], function (exports_38, context_38) {
     "use strict";
     var serializeContent, writeFileToDir, deleteDirectory, dirname;
-    var __moduleName = context_36 && context_36.id;
+    var __moduleName = context_38 && context_38.id;
     return {
         setters: [],
         execute: function () {
-            exports_36("serializeContent", serializeContent = (stringifier) => (obj) => ({
+            exports_38("serializeContent", serializeContent = (stringifier) => (obj) => ({
                 path: obj.path,
                 data: `---\n${stringifier(obj.content)}\n---`,
             }));
-            exports_36("writeFileToDir", writeFileToDir = (dir) => async (file) => {
+            exports_38("writeFileToDir", writeFileToDir = (dir) => async (file) => {
                 const path = `${dir}/${file.path}`;
                 await Deno.mkdir(dirname(path), { recursive: true });
                 await Deno.writeFile(path, new TextEncoder().encode(file.data));
             });
-            exports_36("deleteDirectory", deleteDirectory = async (dir) => {
+            exports_38("deleteDirectory", deleteDirectory = async (dir) => {
                 try {
                     await Deno.remove(dir, { recursive: true });
                 }
@@ -3522,7 +3612,7 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/fi
                         throw error;
                 }
             });
-            exports_36("dirname", dirname = (path) => {
+            exports_38("dirname", dirname = (path) => {
                 const arr = path.split("/");
                 arr.pop();
                 return arr.join("/");
@@ -3530,14 +3620,75 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/fi
         }
     };
 });
-System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/workflow", ["file:///C:/Users/selineri/Repos/workflows/import-collections/graphql", "file:///C:/Users/selineri/Repos/workflows/import-collections/queries", "file:///C:/Users/selineri/Repos/workflows/import-collections/bulk-operation", "file:///C:/Users/selineri/Repos/workflows/import-collections/filesystem"], function (exports_37, context_37) {
+System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/content", [], function (exports_39, context_39) {
     "use strict";
-    var graphql_ts_1, queries_ts_2, bulk_operation_ts_1, filesystem_ts_1, download, NodeType, getNodeType, parseJson, mapCollection, mapCollectionProduct, objectToDomain, filterType, filterPublished, collectionHandleReducer, jsonlToObjects, objectToContent;
-    var __moduleName = context_37 && context_37.id;
+    var addContentModule, toCollectionContent, toCollectionProductContent, toContent;
+    var __moduleName = context_39 && context_39.id;
+    return {
+        setters: [],
+        execute: function () {
+            addContentModule = (modules) => (htmlContent) => {
+                modules.push({
+                    template: "content",
+                    content: "",
+                    usehtml: true,
+                    contenthtml: htmlContent,
+                });
+            };
+            exports_39("toCollectionContent", toCollectionContent = (collection) => {
+                const main = [];
+                const addContent = addContentModule(main);
+                if (collection.contentHtmlSummary)
+                    addContent(collection.contentHtmlSummary);
+                main.push({
+                    template: "products",
+                    collection: collection.handle,
+                });
+                if (collection.contentHtml)
+                    addContent(collection.contentHtml);
+                return {
+                    path: `${collection.handle}/_index.md`,
+                    type: "collection",
+                    content: {
+                        layout: "collection",
+                        handle: collection.handle,
+                        title: collection.title,
+                        seotitle: collection.seoTitle,
+                        seodescription: collection.seoDescription,
+                        filters: true,
+                        main,
+                    },
+                };
+            });
+            exports_39("toCollectionProductContent", toCollectionProductContent = (collectionProduct, counter) => ({
+                path: `${collectionProduct.collection}/products/${collectionProduct.handle}.md`,
+                type: "product",
+                collection: collectionProduct.collection,
+                content: {
+                    noindex: true,
+                    type: "products",
+                    weight: counter,
+                },
+            }));
+            exports_39("toContent", toContent = (obj, counter) => {
+                switch (obj.type) {
+                    case "collection":
+                        return toCollectionContent(obj);
+                    case "product":
+                        return toCollectionProductContent(obj, counter);
+                }
+            });
+        }
+    };
+});
+System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/workflow", ["file:///C:/Users/selineri/Repos/workflows/import-collections/domain", "file:///C:/Users/selineri/Repos/workflows/import-collections/graphql", "file:///C:/Users/selineri/Repos/workflows/import-collections/queries", "file:///C:/Users/selineri/Repos/workflows/import-collections/bulk-operation", "file:///C:/Users/selineri/Repos/workflows/import-collections/filesystem", "file:///C:/Users/selineri/Repos/workflows/import-collections/content"], function (exports_40, context_40) {
+    "use strict";
+    var domain_ts_1, graphql_ts_1, queries_ts_3, bulk_operation_ts_1, filesystem_ts_1, content_ts_1, download;
+    var __moduleName = context_40 && context_40.id;
     async function syncCollections(shopifyShop, shopifyBasicAuth, collectionsDir, stringifier) {
         const adminQueryable = graphql_ts_1.createAdminQueryable(shopifyShop, shopifyBasicAuth);
         const runBulkQuery = bulk_operation_ts_1.createBulkOperation(adminQueryable);
-        const runCollectionBulkQuery = () => runBulkQuery(queries_ts_2.collectionBulkQuery);
+        const runCollectionBulkQuery = () => runBulkQuery(queries_ts_3.collectionBulkQuery);
         const getBulkOperationUrl = () => bulk_operation_ts_1.getBulkOperationUrlWhenReady(adminQueryable);
         const serialize = filesystem_ts_1.serializeContent(stringifier);
         const write = filesystem_ts_1.writeFileToDir(collectionsDir);
@@ -3545,27 +3696,33 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/wo
             .then(runCollectionBulkQuery)
             .then(getBulkOperationUrl)
             .then(download);
-        const files = jsonlToObjects(jsonl)
-            .map(objectToContent)
+        const files = domain_ts_1.jsonlToObjects(jsonl)
+            .map(content_ts_1.toContent)
             .map(serialize);
         await filesystem_ts_1.deleteDirectory(collectionsDir);
         await Promise.all(files.map(write));
         console.log("Success!");
     }
-    exports_37("default", syncCollections);
+    exports_40("default", syncCollections);
     return {
         setters: [
+            function (domain_ts_1_1) {
+                domain_ts_1 = domain_ts_1_1;
+            },
             function (graphql_ts_1_1) {
                 graphql_ts_1 = graphql_ts_1_1;
             },
-            function (queries_ts_2_1) {
-                queries_ts_2 = queries_ts_2_1;
+            function (queries_ts_3_1) {
+                queries_ts_3 = queries_ts_3_1;
             },
             function (bulk_operation_ts_1_1) {
                 bulk_operation_ts_1 = bulk_operation_ts_1_1;
             },
             function (filesystem_ts_1_1) {
                 filesystem_ts_1 = filesystem_ts_1_1;
+            },
+            function (content_ts_1_1) {
+                content_ts_1 = content_ts_1_1;
             }
         ],
         execute: function () {
@@ -3573,98 +3730,13 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/wo
                 const response = await fetch(url);
                 return await response.text();
             };
-            (function (NodeType) {
-                NodeType[NodeType["Collection"] = 0] = "Collection";
-                NodeType[NodeType["Product"] = 1] = "Product";
-            })(NodeType || (NodeType = {}));
-            exports_37("NodeType", NodeType);
-            exports_37("getNodeType", getNodeType = (id) => {
-                const match = id.match(/gid:\/\/shopify\/(\w+)\/.*/);
-                if (!match)
-                    throw new Error(`Could not get type from id ${id}`);
-                return NodeType[match[1]];
-            });
-            parseJson = (json) => JSON.parse(json);
-            exports_37("mapCollection", mapCollection = (bulkCollection) => ({
-                type: "collection",
-                handle: bulkCollection.handle,
-                title: bulkCollection.title,
-                description: bulkCollection.descriptionHtml,
-            }));
-            exports_37("mapCollectionProduct", mapCollectionProduct = (collectionHandles) => (bulkCollectionProduct) => ({
-                type: "product",
-                handle: bulkCollectionProduct.handle,
-                collection: collectionHandles[bulkCollectionProduct.__parentId],
-            }));
-            objectToDomain = (mapCollectionProduct) => (obj) => {
-                switch (getNodeType(obj.id)) {
-                    case NodeType.Collection:
-                        return mapCollection(obj);
-                    case NodeType.Product:
-                        return mapCollectionProduct(obj);
-                }
-            };
-            filterType = (type) => (obj) => getNodeType(obj.id) === type;
-            filterPublished = (obj) => obj.publishedOnCurrentPublication;
-            exports_37("collectionHandleReducer", collectionHandleReducer = (collectionHandles, collection) => {
-                return {
-                    ...collectionHandles,
-                    [collection.id]: collection.handle,
-                };
-            });
-            exports_37("jsonlToObjects", jsonlToObjects = (jsonl) => {
-                const parsed = jsonl
-                    .split("\n")
-                    .filter(Boolean)
-                    .map(parseJson)
-                    .filter(filterPublished);
-                const collectionHandles = parsed
-                    .filter(filterType(NodeType.Collection))
-                    .map((obj) => obj)
-                    .reduce(collectionHandleReducer, {});
-                const mapProduct = mapCollectionProduct(collectionHandles);
-                const domainObjects = parsed.map(objectToDomain(mapProduct));
-                return domainObjects;
-            });
-            objectToContent = (obj, counter) => {
-                switch (obj.type) {
-                    case "collection":
-                        return {
-                            path: `${obj.handle}/_index.md`,
-                            type: "collection",
-                            content: {
-                                layout: "collection",
-                                handle: obj.handle,
-                                description: obj.description,
-                                title: obj.title,
-                                filters: true,
-                                main: [
-                                    {
-                                        template: "products",
-                                        collection: obj.handle,
-                                    },
-                                ],
-                            },
-                        };
-                    case "product":
-                        return {
-                            path: `${obj.collection}/products/${obj.handle}.md`,
-                            type: "product",
-                            content: {
-                                noindex: true,
-                                type: "products",
-                                weight: counter,
-                            },
-                        };
-                }
-            };
         }
     };
 });
-System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/cmd", ["https://deno.land/std@0.65.0/encoding/yaml", "file:///C:/Users/selineri/Repos/workflows/import-collections/workflow"], function (exports_38, context_38) {
+System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/cmd", ["https://deno.land/std@0.65.0/encoding/yaml", "file:///C:/Users/selineri/Repos/workflows/import-collections/workflow"], function (exports_41, context_41) {
     "use strict";
     var yaml_ts_1, workflow_ts_1, _a, shopifyShop, directory, shopifyBasicAuth, usage;
-    var __moduleName = context_38 && context_38.id;
+    var __moduleName = context_41 && context_41.id;
     return {
         setters: [
             function (yaml_ts_1_1) {
