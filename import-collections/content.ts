@@ -32,41 +32,47 @@ export type CollectionTypeContent =
   | CollectionProductContent;
 
 type Markdown = string;
+type Html = string;
 
 type ContentModuleBase<T, t> = {
   template: t;
 } & T;
 
-type ContentModuleContent = ContentModuleBase<{ content: Markdown }, "content">;
+export type ContentModuleContent = ContentModuleBase<{
+  content: Markdown;
+  usehtml?: boolean;
+  contenthtml?: Html;
+}, "content">;
 type ContentModuleProductList = ContentModuleBase<
   { collection: CollectionHandle },
   "products"
 >;
 type ContentModule = ContentModuleContent | ContentModuleProductList;
 
+const addContentModule = (modules: ContentModule[]) =>
+  (htmlContent: Html) => {
+    modules.push({
+      template: "content",
+      content: "",
+      usehtml: true,
+      contenthtml: htmlContent,
+    });
+  };
+
 export const toCollectionContent = (
   collection: Collection,
 ): CollectionContent => {
   const main: ContentModule[] = [];
+  const addContent = addContentModule(main);
   // add summary to modules if exists
-  if (collection.contentHtmlSummary) {
-    main.push({
-      template: "content",
-      content: collection.contentHtmlSummary,
-    });
-  }
+  if (collection.contentHtmlSummary) addContent(collection.contentHtmlSummary);
   // add product list
   main.push({
     template: "products",
     collection: collection.handle,
   });
   // add main content to modules if exists
-  if (collection.contentHtml) {
-    main.push({
-      template: "content",
-      content: collection.contentHtml,
-    });
-  }
+  if (collection.contentHtml) addContent(collection.contentHtml);
 
   return {
     path: `${collection.handle}/_index.md`,
@@ -98,7 +104,7 @@ export const toCollectionProductContent = (
   },
 });
 
-export const objectToContent = (
+export const toContent = (
   obj: CollectionType,
   counter: number,
 ): CollectionTypeContent => {

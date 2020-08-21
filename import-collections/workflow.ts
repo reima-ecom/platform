@@ -17,7 +17,7 @@ import {
   writeFileToDir,
   deleteDirectory,
 } from "./filesystem.ts";
-import { objectToContent } from "./content.ts";
+import { toContent } from "./content.ts";
 
 // file downloading
 
@@ -54,7 +54,7 @@ export default async function syncCollections(
 
   // create files
   const files = jsonlToObjects(jsonl)
-    .map(objectToContent)
+    .map(toContent)
     .map(serialize);
 
   // write

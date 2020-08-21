@@ -1,4 +1,7 @@
-import { toCollectionContent, CollectionContent } from "./content.ts";
+import {
+  toCollectionContent,
+  CollectionContent,
+} from "./content.ts";
 import { assertEquals } from "https://deno.land/std@0.65.0/testing/asserts.ts";
 
 Deno.test("content summaries work", () => {
@@ -24,7 +27,9 @@ Deno.test("content summaries work", () => {
       main: [
         {
           template: "content",
-          content: "summary"
+          content: "",
+          usehtml: true,
+          contenthtml: "summary"
         },
         {
           template: "products",
@@ -32,8 +37,10 @@ Deno.test("content summaries work", () => {
         },
         {
           template: "content",
-          content: "content",
-        }
+          content: "",
+          usehtml: true,
+          contenthtml: "content",
+        },
       ],
     },
   };
