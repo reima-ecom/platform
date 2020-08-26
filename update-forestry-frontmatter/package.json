@@ -1,5 +1,5 @@
 {
-  "name": "@reima-solution-sales/update-forestry-frontmatter",
+  "name": "@reima-ecom/update-forestry-frontmatter",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/reima-solution-sales/workflows.git",
+    "url": "git://github.com/reima-ecom/workflows.git",
     "directory": "update-forestry-frontmatter"
   },
   "scripts": {
