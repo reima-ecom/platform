@@ -63,6 +63,39 @@ export const collectionHandleReducer = (
   };
 };
 
+/**
+ * @param collectionHandles Map (object) of collection ids to handles
+ */
+export const mapCollectionProduct = (
+  collectionHandles: { [id: string]: string },
+) =>
+  (
+    bulkCollectionProduct: CollectionProductShopify,
+  ): CollectionProduct | undefined => {
+    const collection = collectionHandles[bulkCollectionProduct.__parentId];
+    // if collection not found, it most means that the collection is not published
+    if (!collection) return;
+    return ({
+      type: "product",
+      handle: bulkCollectionProduct.handle,
+      collection,
+    });
+  };
+
+export const objectToDomain = (
+  mapCollectionProduct: (
+    bulkCollectionProduct: CollectionProductShopify,
+  ) => CollectionProduct | undefined,
+) =>
+  (obj: Node): CollectionType | undefined => {
+    switch (getNodeType(obj.id)) {
+      case NodeType.Collection:
+        return mapCollection(obj as CollectionShopify);
+      case NodeType.Product:
+        return mapCollectionProduct(obj as CollectionProductShopify);
+    }
+  };
+
 // jsonl to domain object
 
 export const jsonlToObjects = (jsonl: Jsonl): CollectionType[] => {
@@ -76,32 +109,8 @@ export const jsonlToObjects = (jsonl: Jsonl): CollectionType[] => {
     .map((obj) => obj as CollectionShopify)
     .reduce<{ [id: string]: string }>(collectionHandleReducer, {});
   const mapProduct = mapCollectionProduct(collectionHandles);
-  const domainObjects = parsed.map(objectToDomain(mapProduct));
+  const domainObjects = parsed
+    .map(objectToDomain(mapProduct))
+    .filter(Boolean as unknown as (input: any) => input is CollectionType);
   return domainObjects;
 };
-
-/**
- * @param collectionHandles Map (object) of collection ids to handles
- */
-export const mapCollectionProduct = (
-  collectionHandles: { [id: string]: string },
-) =>
-  (bulkCollectionProduct: CollectionProductShopify): CollectionProduct => ({
-    type: "product",
-    handle: bulkCollectionProduct.handle,
-    collection: collectionHandles[bulkCollectionProduct.__parentId],
-  });
-
-export const objectToDomain = (
-  mapCollectionProduct: (
-    bulkCollectionProduct: CollectionProductShopify,
-  ) => CollectionProduct,
-) =>
-  (obj: Node): CollectionType => {
-    switch (getNodeType(obj.id)) {
-      case NodeType.Collection:
-        return mapCollection(obj as CollectionShopify);
-      case NodeType.Product:
-        return mapCollectionProduct(obj as CollectionProductShopify);
-    }
-  };
