@@ -3355,7 +3355,7 @@ System.register("https://deno.land/std@0.65.0/encoding/yaml", ["https://deno.lan
         }
     };
 });
-System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/graphql", [], function (exports_33, context_33) {
+System.register("file:///C:/Users/selineri/Reima/platform/import-collections/graphql", [], function (exports_33, context_33) {
     "use strict";
     var createAdminQueryable;
     var __moduleName = context_33 && context_33.id;
@@ -3384,7 +3384,7 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/gr
         }
     };
 });
-System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/node", [], function (exports_34, context_34) {
+System.register("file:///C:/Users/selineri/Reima/platform/import-collections/node", [], function (exports_34, context_34) {
     "use strict";
     var NodeType, getNodeType, filterType, filterPublished;
     var __moduleName = context_34 && context_34.id;
@@ -3407,7 +3407,7 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/no
         }
     };
 });
-System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/queries", [], function (exports_35, context_35) {
+System.register("file:///C:/Users/selineri/Reima/platform/import-collections/queries", [], function (exports_35, context_35) {
     "use strict";
     var createBulkQuery, currentBulkOperation, collectionBulkQuery, toCollectionTypeShopify;
     var __moduleName = context_35 && context_35.id;
@@ -3474,9 +3474,9 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/qu
         }
     };
 });
-System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/domain", ["file:///C:/Users/selineri/Repos/workflows/import-collections/queries", "file:///C:/Users/selineri/Repos/workflows/import-collections/node"], function (exports_36, context_36) {
+System.register("file:///C:/Users/selineri/Reima/platform/import-collections/domain", ["file:///C:/Users/selineri/Reima/platform/import-collections/queries", "file:///C:/Users/selineri/Reima/platform/import-collections/node"], function (exports_36, context_36) {
     "use strict";
-    var queries_ts_1, node_ts_1, mapCollection, collectionHandleReducer, jsonlToObjects, mapCollectionProduct, objectToDomain;
+    var queries_ts_1, node_ts_1, mapCollection, collectionHandleReducer, mapCollectionProduct, objectToDomain, jsonlToObjects;
     var __moduleName = context_36 && context_36.id;
     return {
         setters: [
@@ -3510,6 +3510,24 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/do
                     [collection.id]: collection.handle,
                 };
             });
+            exports_36("mapCollectionProduct", mapCollectionProduct = (collectionHandles) => (bulkCollectionProduct) => {
+                const collection = collectionHandles[bulkCollectionProduct.__parentId];
+                if (!collection)
+                    return;
+                return ({
+                    type: "product",
+                    handle: bulkCollectionProduct.handle,
+                    collection,
+                });
+            });
+            exports_36("objectToDomain", objectToDomain = (mapCollectionProduct) => (obj) => {
+                switch (node_ts_1.getNodeType(obj.id)) {
+                    case node_ts_1.NodeType.Collection:
+                        return mapCollection(obj);
+                    case node_ts_1.NodeType.Product:
+                        return mapCollectionProduct(obj);
+                }
+            });
             exports_36("jsonlToObjects", jsonlToObjects = (jsonl) => {
                 const parsed = jsonl
                     .split("\n")
@@ -3521,26 +3539,15 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/do
                     .map((obj) => obj)
                     .reduce(collectionHandleReducer, {});
                 const mapProduct = mapCollectionProduct(collectionHandles);
-                const domainObjects = parsed.map(objectToDomain(mapProduct));
+                const domainObjects = parsed
+                    .map(objectToDomain(mapProduct))
+                    .filter(Boolean);
                 return domainObjects;
-            });
-            exports_36("mapCollectionProduct", mapCollectionProduct = (collectionHandles) => (bulkCollectionProduct) => ({
-                type: "product",
-                handle: bulkCollectionProduct.handle,
-                collection: collectionHandles[bulkCollectionProduct.__parentId],
-            }));
-            exports_36("objectToDomain", objectToDomain = (mapCollectionProduct) => (obj) => {
-                switch (node_ts_1.getNodeType(obj.id)) {
-                    case node_ts_1.NodeType.Collection:
-                        return mapCollection(obj);
-                    case node_ts_1.NodeType.Product:
-                        return mapCollectionProduct(obj);
-                }
             });
         }
     };
 });
-System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/bulk-operation", ["file:///C:/Users/selineri/Repos/workflows/import-collections/queries"], function (exports_37, context_37) {
+System.register("file:///C:/Users/selineri/Reima/platform/import-collections/bulk-operation", ["file:///C:/Users/selineri/Reima/platform/import-collections/queries"], function (exports_37, context_37) {
     "use strict";
     var queries_ts_2, createBulkOperation, getBulkOperationUrlWhenReady;
     var __moduleName = context_37 && context_37.id;
@@ -3587,7 +3594,7 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/bu
         }
     };
 });
-System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/filesystem", [], function (exports_38, context_38) {
+System.register("file:///C:/Users/selineri/Reima/platform/import-collections/filesystem", [], function (exports_38, context_38) {
     "use strict";
     var serializeContent, writeFileToDir, deleteDirectory, dirname;
     var __moduleName = context_38 && context_38.id;
@@ -3620,7 +3627,7 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/fi
         }
     };
 });
-System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/content", [], function (exports_39, context_39) {
+System.register("file:///C:/Users/selineri/Reima/platform/import-collections/content", [], function (exports_39, context_39) {
     "use strict";
     var addContentModule, toCollectionContent, toCollectionProductContent, toContent;
     var __moduleName = context_39 && context_39.id;
@@ -3681,10 +3688,16 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/co
         }
     };
 });
-System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/workflow", ["file:///C:/Users/selineri/Repos/workflows/import-collections/domain", "file:///C:/Users/selineri/Repos/workflows/import-collections/graphql", "file:///C:/Users/selineri/Repos/workflows/import-collections/queries", "file:///C:/Users/selineri/Repos/workflows/import-collections/bulk-operation", "file:///C:/Users/selineri/Repos/workflows/import-collections/filesystem", "file:///C:/Users/selineri/Repos/workflows/import-collections/content"], function (exports_40, context_40) {
+System.register("file:///C:/Users/selineri/Reima/platform/import-collections/workflow", ["file:///C:/Users/selineri/Reima/platform/import-collections/domain", "file:///C:/Users/selineri/Reima/platform/import-collections/graphql", "file:///C:/Users/selineri/Reima/platform/import-collections/queries", "file:///C:/Users/selineri/Reima/platform/import-collections/bulk-operation", "file:///C:/Users/selineri/Reima/platform/import-collections/filesystem", "file:///C:/Users/selineri/Reima/platform/import-collections/content"], function (exports_40, context_40) {
     "use strict";
-    var domain_ts_1, graphql_ts_1, queries_ts_3, bulk_operation_ts_1, filesystem_ts_1, content_ts_1, download;
+    var domain_ts_1, graphql_ts_1, queries_ts_3, bulk_operation_ts_1, filesystem_ts_1, content_ts_1, download, log, runInBatches;
     var __moduleName = context_40 && context_40.id;
+    function* chunk(array, size) {
+        for (let i = 0; i < array.length; i += size) {
+            yield array.slice(i, i + size);
+        }
+        return;
+    }
     async function syncCollections(shopifyShop, shopifyBasicAuth, collectionsDir, stringifier) {
         const adminQueryable = graphql_ts_1.createAdminQueryable(shopifyShop, shopifyBasicAuth);
         const runBulkQuery = bulk_operation_ts_1.createBulkOperation(adminQueryable);
@@ -3693,14 +3706,19 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/wo
         const serialize = filesystem_ts_1.serializeContent(stringifier);
         const write = filesystem_ts_1.writeFileToDir(collectionsDir);
         const jsonl = await Promise.resolve()
+            .then(log('Running bulk query...', false))
             .then(runCollectionBulkQuery)
             .then(getBulkOperationUrl)
+            .then(log("Bulk operation url:"))
             .then(download);
         const files = domain_ts_1.jsonlToObjects(jsonl)
             .map(content_ts_1.toContent)
             .map(serialize);
+        console.log("Writing files...");
         await filesystem_ts_1.deleteDirectory(collectionsDir);
-        await Promise.all(files.map(write));
+        const batch = runInBatches(50);
+        await Promise.resolve(files)
+            .then(batch(write));
         console.log("Success!");
     }
     exports_40("default", syncCollections);
@@ -3730,10 +3748,24 @@ System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/wo
                 const response = await fetch(url);
                 return await response.text();
             };
+            log = (description, logValue = true) => (input) => {
+                console.log(description);
+                if (logValue)
+                    console.log(input);
+                return input;
+            };
+            runInBatches = (operationsPerBatch) => (fn) => async (inputArray) => {
+                console.log(`Running batched await operation ${inputArray.length} by ${operationsPerBatch}...`);
+                console.time('Done');
+                for (const partialArray of chunk(inputArray, operationsPerBatch)) {
+                    await Promise.all(partialArray.map(fn));
+                }
+                console.timeEnd('Done');
+            };
         }
     };
 });
-System.register("file:///C:/Users/selineri/Repos/workflows/import-collections/cmd", ["https://deno.land/std@0.65.0/encoding/yaml", "file:///C:/Users/selineri/Repos/workflows/import-collections/workflow"], function (exports_41, context_41) {
+System.register("file:///C:/Users/selineri/Reima/platform/import-collections/cmd", ["https://deno.land/std@0.65.0/encoding/yaml", "file:///C:/Users/selineri/Reima/platform/import-collections/workflow"], function (exports_41, context_41) {
     "use strict";
     var yaml_ts_1, workflow_ts_1, _a, shopifyShop, directory, shopifyBasicAuth, usage;
     var __moduleName = context_41 && context_41.id;
@@ -3766,4 +3798,4 @@ base64-encoded value of "[API key]:[Password]".
     };
 });
 
-await __instantiate("file:///C:/Users/selineri/Repos/workflows/import-collections/cmd", true);
+await __instantiate("file:///C:/Users/selineri/Reima/platform/import-collections/cmd", true);
