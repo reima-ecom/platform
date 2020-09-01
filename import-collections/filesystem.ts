@@ -3,7 +3,7 @@ export type File = {
   data: string;
 };
 
-type Content = {
+export type Content = {
   path: string;
   content: object;
 };
@@ -13,6 +13,15 @@ export const serializeContent = (stringifier: (obj: object) => string) =>
     path: obj.path,
     data: `---\n${stringifier(obj.content)}\n---`,
   });
+
+export const deserializeContent = (parser: (str: string) => unknown) =>
+  (file: File): Content => {
+    const frontmatter = file.data.split("---")[1].trim();
+    return {
+      path: file.path,
+      content: parser(frontmatter) as object,
+    };
+  };
 
 export const writeFileToDir = (dir: string) =>
   async (file: File) => {
@@ -38,3 +47,34 @@ export const dirname = (path: string) => {
   arr.pop();
   return arr.join("/");
 };
+
+const readFilesRecursive = async (dir: string): Promise<File[]> => {
+  const files: File[] = [];
+  for await (const dirEntry of Deno.readDir(dir)) {
+    if (dirEntry.isDirectory) {
+      const subdirFiles = await readFilesRecursive(`${dir}/${dirEntry.name}`);
+      files.push(...subdirFiles);
+    } else if (dirEntry.isFile) {
+      const path = `${dir}/${dirEntry.name}`;
+      files.push({
+        path,
+        data: await Deno.readTextFile(path),
+      });
+    }
+  }
+  return files;
+};
+
+export const readFilesFromDir = (dir: string) =>
+  async (): Promise<File[]> => {
+    try {
+      const files = await readFilesRecursive(dir);
+      return files.map((file) => ({
+        // remove initial dir path
+        path: file.path.replace(`${dir}/`, ""),
+        data: file.data,
+      }));
+    } catch (error) {
+      return [];
+    }
+  };

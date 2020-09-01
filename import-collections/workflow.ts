@@ -16,6 +16,8 @@ import {
   serializeContent,
   writeFileToDir,
   deleteDirectory,
+  readFilesFromDir,
+  deserializeContent,
 } from "./filesystem.ts";
 import { toContent } from "./content.ts";
 
@@ -33,7 +35,10 @@ const log = (description: string, logValue: boolean = true) =>
     return input;
   };
 
-function* chunk(array: any[], size: number): Generator<any[], undefined, undefined> {
+function* chunk(
+  array: any[],
+  size: number,
+): Generator<any[], undefined, undefined> {
   for (let i = 0; i < array.length; i += size) {
     yield array.slice(i, i + size);
   }
@@ -43,12 +48,14 @@ function* chunk(array: any[], size: number): Generator<any[], undefined, undefin
 const runInBatches = (operationsPerBatch: number) =>
   (fn: (value: any) => any) =>
     async (inputArray: any[]) => {
-      console.log(`Running batched await operation ${inputArray.length} by ${operationsPerBatch}...`);
-      console.time('Done')
+      console.log(
+        `Running batched await operation ${inputArray.length} by ${operationsPerBatch}...`,
+      );
+      console.time("Done");
       for (const partialArray of chunk(inputArray, operationsPerBatch)) {
         await Promise.all(partialArray.map(fn));
       }
-      console.timeEnd('Done');
+      console.timeEnd("Done");
     };
 
 // main workflow
@@ -58,6 +65,7 @@ export default async function syncCollections(
   shopifyBasicAuth: string,
   collectionsDir: string,
   stringifier: (obj: object) => string,
+  parser: (str: string) => unknown,
 ) {
   // set up dependencies
   const adminQueryable = createAdminQueryable(
@@ -73,7 +81,7 @@ export default async function syncCollections(
 
   // get jsonl
   const jsonl: Jsonl = await Promise.resolve()
-    .then(log('Running bulk query...', false))
+    .then(log("Running bulk query...", false))
     .then(runCollectionBulkQuery)
     .then(getBulkOperationUrl)
     .then(log("Bulk operation url:"))
@@ -85,6 +93,12 @@ export default async function syncCollections(
     .map(serialize);
 
   console.log("Writing files...");
+
+  // read existing files
+  await Promise.resolve()
+    .then(readFilesFromDir(collectionsDir))
+    .then((arr) => arr.map(deserializeContent(parser)))
+    .then(log("Existing content:"));
 
   // write
   await deleteDirectory(collectionsDir);

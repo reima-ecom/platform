@@ -1,4 +1,4 @@
-import { stringify } from "https://deno.land/std@0.65.0/encoding/yaml.ts";
+import { stringify, parse } from "https://deno.land/std@0.65.0/encoding/yaml.ts";
 import syncCollections from "./workflow.ts";
 
 const [shopifyShop, directory] = Deno.args;
@@ -18,4 +18,4 @@ if (!shopifyShop || !directory || !shopifyBasicAuth) {
   Deno.exit(1);
 }
 
-await syncCollections(shopifyShop, shopifyBasicAuth, directory, stringify);
+await syncCollections(shopifyShop, shopifyBasicAuth, directory, stringify, parse);

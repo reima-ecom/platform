@@ -2,7 +2,7 @@ import {
   toCollectionContent,
   CollectionContent,
 } from "./content.ts";
-import { assertEquals } from "https://deno.land/std@0.65.0/testing/asserts.ts";
+import { assertEquals } from "./deps.test.ts";
 
 Deno.test("content summaries work", () => {
   const content = toCollectionContent({

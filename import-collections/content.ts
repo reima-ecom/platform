@@ -4,6 +4,7 @@ import {
   Collection,
   CollectionProduct,
 } from "./domain.ts";
+import { Content as FileContent } from "./filesystem.ts";
 
 export type Content<t, T, A = {}> = {
   path: string;
@@ -104,14 +105,41 @@ export const toCollectionProductContent = (
   },
 });
 
-export const toContent = (
+export function toContent(
   obj: CollectionType,
   counter: number,
-): CollectionTypeContent => {
-  switch (obj.type) {
-    case "collection":
-      return toCollectionContent(obj);
-    case "product":
-      return toCollectionProductContent(obj, counter);
+): CollectionTypeContent;
+export function toContent(
+  obj: FileContent,
+  counter: number,
+): CollectionTypeContent;
+
+export function toContent(
+  obj: CollectionType | FileContent,
+  counter: number,
+): CollectionTypeContent {
+  if ("type" in obj) {
+    switch (obj.type) {
+      case "collection":
+        return toCollectionContent(obj);
+      case "product":
+        return toCollectionProductContent(obj, counter);
+    }
+  } else {
+    if (obj.path.includes("/products/")) {
+      const collection = obj.path.split("/")[0];
+      return {
+        type: "product",
+        collection,
+        path: obj.path,
+        content: obj.content as any,
+      };
+    } else {
+      return {
+        type: "collection",
+        path: obj.path,
+        content: obj.content as any,
+      };
+    }
   }
-};
+}
