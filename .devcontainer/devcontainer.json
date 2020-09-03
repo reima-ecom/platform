@@ -12,16 +12,11 @@
         "denoland.vscode-deno"
     ],
     "remoteEnv": {
+        // used by shopify importer
         "SHOPIFY_BASIC_AUTH": "${localEnv:SHOPIFY_BASIC_AUTH_CA}",
-        "UNIFAUN_TOKEN": "${localEnv:UNIFAUN_TOKEN}",
-        "UNIFAUN_SENDER": "1",
-        "UNIFAUN_SERVICE": "PO2017",
-        "SHOPIFY_WEBHOOK_SECRET": "${localEnv:SHOPIFY_WEBHOOK_SECRET}"
     },
     // Use 'forwardPorts' to make a list of ports inside the container available locally.
-    "forwardPorts": [
-        8000
-    ],
+    // "forwardPorts": [],
     // Uncomment to use the Docker CLI from inside the container. See https://aka.ms/vscode-remote/samples/docker-from-docker.
     // "mounts": [ "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind" ],
     // Uncomment to connect as a non-root user. See https://aka.ms/vscode-remote/containers/non-root.
