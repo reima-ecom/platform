@@ -1,6 +1,3 @@
-#!/usr/bin/env node
-/* eslint-disable no-console */
-
 import updateFrontmatter from "./workflows.ts";
 
 const [githubRepo, targetDir = "."] = Deno.args;
