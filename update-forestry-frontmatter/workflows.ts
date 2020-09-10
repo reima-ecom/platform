@@ -1,4 +1,4 @@
-import { map, yaml } from "./deps.ts";
+import { map, yaml, log } from "./deps.ts";
 
 const FRONTMATTER_PATH = ".forestry/front_matter/templates";
 
@@ -32,24 +32,73 @@ type FileWithDefinition = {
   definition: FrontmatterSpecs;
 };
 
-const readDirGithub = (githubRepo: string, path: string) =>
+const readDirGithub = (githubRepo: string, path: string, githubToken: string) =>
   async (): Promise<string[]> => {
-    throw new Error("Not implemented");
+    const response = await fetch(
+      `https://api.github.com/repos/${githubRepo}/contents/${path}`,
+      {
+        headers: {
+          "Accept": "application/vnd.github.v3",
+          "Authorization": `token ${githubToken}`,
+        },
+      },
+    );
+    if (!response.ok) {
+      throw new Error(`Could not fetch from GitHub: ${response.statusText}`);
+    }
+    const contents: { name: string }[] = await response.json();
+    return contents.map((entry) => entry.name);
   };
 
-const readFileGithub = (githubRepo: string, path: string) =>
+const readFileGithub = (
+  githubRepo: string,
+  path: string,
+  githubToken: string,
+) =>
   async (filename: string): Promise<FileWithContents> => {
-    throw new Error("Not implemented");
+    const url =
+      `https://api.github.com/repos/${githubRepo}/contents/${path}/${filename}`;
+    const response = await fetch(
+      url,
+      {
+        headers: {
+          // raw means raw file
+          "Accept": "application/vnd.github.v3.raw",
+          "Authorization": `token ${githubToken}`,
+        },
+      },
+    );
+    if (!response.ok) {
+      throw new Error(`Could not fetch from GitHub: ${response.statusText}`);
+    }
+    return {
+      filename: filename,
+      contents: await response.text(),
+    };
   };
 
 const readDir = (dirpath: string) =>
   async (): Promise<string[]> => {
-    throw new Error("Not implemented");
+    try {
+      const filenames: string[] = [];
+      for await (const dirEntry of Deno.readDir(dirpath)) {
+        if (dirEntry.isFile) filenames.push();
+      }
+      return filenames;
+    } catch (error) {
+      // swallow and return empty array if not found
+      if (error.name === "NotFound") return [];
+      throw error;
+    }
   };
 
-const readFile = (filepath: string) =>
+const readFile = (dirpath: string) =>
   async (filename: string): Promise<FileWithContents> => {
-    throw new Error("Not implemented");
+    const contents = await Deno.readTextFile(`${dirpath}/${filename}`);
+    return {
+      filename,
+      contents,
+    };
   };
 
 export const parseTemplateContents = (
@@ -115,26 +164,47 @@ export const serializeTemplateContents = (
   };
 };
 
-export const writeFrontmatterTemplate = (rootDir: string) =>
+export const writeFrontmatterTemplate = (dirpath: string) =>
   async (templateWithContent: FileWithContents): Promise<void> =>
     Deno.writeTextFile(
-      `${rootDir}/${FRONTMATTER_PATH}/${templateWithContent.filename}`,
+      `${dirpath}/${templateWithContent.filename}`,
       templateWithContent.contents,
     );
+
+const rimraf = (path: string) =>
+  async (arg: any) => {
+    try {
+      await Deno.remove(path, { recursive: true });
+    } catch (error) {
+      if (error.name !== "NotFound") throw error;
+    }
+    return arg;
+  };
+
+const mkdir = (path: string) =>
+  async (arg: any) => {
+    try {
+      await Deno.mkdir(path, { recursive: true });
+    } catch (error) {
+      if (error.name !== "NotFound") throw error;
+    }
+    return arg;
+  };
 
 const updateFrontmatter = async (
   githubRepo: string,
   targetDir: string,
-): Promise<string[]> => {
-  const eventLog: string[] = [];
+  githubToken: string,
+): Promise<void> => {
   // read source dir fm into array
+  console.log(`Getting front matter templates from ${githubRepo}`);
   const sourceDefinitions = await Promise
     .resolve()
-    .then(readDirGithub(githubRepo, FRONTMATTER_PATH))
-    .then(map(readFileGithub(githubRepo, FRONTMATTER_PATH)))
+    .then(readDirGithub(githubRepo, FRONTMATTER_PATH, githubToken))
+    .then(map(readFileGithub(githubRepo, FRONTMATTER_PATH, githubToken)))
     .then(map(parseTemplateContents))
     .then(map(removeTemplatePage));
-  eventLog.push("Got source front matter files");
+  console.log("Got source front matter files");
 
   // read target dir pages into array
   const targetPages = await Promise
@@ -143,11 +213,7 @@ const updateFrontmatter = async (
     .then(map(readFile(FRONTMATTER_PATH)))
     .then(map(parseTemplateContents))
     .then(map(keepTemplatePagesOnly));
-  eventLog.push("Got possible pages from target frontmatter");
-
-  // delete target dir
-  const dirPath = `${targetDir}/${FRONTMATTER_PATH}`;
-  await Deno.mkdir(dirPath, { recursive: true });
+  console.log("Got possible pages from target frontmatter");
 
   // join target pages into source front matter
   const templatesWithPages = joinPagesIntoTemplateDefinitions(
@@ -155,14 +221,16 @@ const updateFrontmatter = async (
     sourceDefinitions,
   );
 
+  const dirPath = `${targetDir}/${FRONTMATTER_PATH}`;
+
   // write to dir
   await Promise
     .resolve(templatesWithPages)
     .then(map(serializeTemplateContents))
+    .then(rimraf(dirPath))
+    .then(mkdir(dirPath))
     .then(map(writeFrontmatterTemplate(dirPath)));
-  eventLog.push("Success!");
-
-  return eventLog;
+  console.log("Success!");
 };
 
 export default updateFrontmatter;
