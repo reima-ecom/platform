@@ -6,7 +6,7 @@ import {
   keepTemplatePagesOnly,
   joinPagesIntoTemplateDefinitions,
 } from "./workflows.ts";
-import { assertEquals } from "./deps.test.ts";
+import { assertEquals } from "./deps.ts";
 
 Deno.test("removes pages param", () => {
   assertEquals(

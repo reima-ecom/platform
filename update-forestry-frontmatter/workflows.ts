@@ -82,7 +82,7 @@ const readDir = (dirpath: string) =>
     try {
       const filenames: string[] = [];
       for await (const dirEntry of Deno.readDir(dirpath)) {
-        if (dirEntry.isFile) filenames.push();
+        if (dirEntry.isFile) filenames.push(dirEntry.name);
       }
       return filenames;
     } catch (error) {
@@ -206,11 +206,13 @@ const updateFrontmatter = async (
     .then(map(removeTemplatePage));
   console.log("Got source front matter files");
 
+  const targetDirPath = `${targetDir}/${FRONTMATTER_PATH}`;
+
   // read target dir pages into array
   const targetPages = await Promise
     .resolve()
-    .then(readDir(FRONTMATTER_PATH))
-    .then(map(readFile(FRONTMATTER_PATH)))
+    .then(readDir(targetDirPath))
+    .then(map(readFile(targetDirPath)))
     .then(map(parseTemplateContents))
     .then(map(keepTemplatePagesOnly));
   console.log("Got possible pages from target frontmatter");
@@ -221,15 +223,13 @@ const updateFrontmatter = async (
     sourceDefinitions,
   );
 
-  const dirPath = `${targetDir}/${FRONTMATTER_PATH}`;
-
   // write to dir
   await Promise
     .resolve(templatesWithPages)
     .then(map(serializeTemplateContents))
-    .then(rimraf(dirPath))
-    .then(mkdir(dirPath))
-    .then(map(writeFrontmatterTemplate(dirPath)));
+    .then(rimraf(targetDirPath))
+    .then(mkdir(targetDirPath))
+    .then(map(writeFrontmatterTemplate(targetDirPath)));
   console.log("Success!");
 };
 
